@@ -45,7 +45,7 @@ pub fn part1() {
 }
 
 pub fn part2() {
-  let #(left, right) = extract_numbers("./data/d1p1.data").0 |> unzip
+  let #(left, right) = extract_numbers("./data/d1.data").0 |> unzip
 
   let right_counter =
     right
