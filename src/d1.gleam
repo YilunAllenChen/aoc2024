@@ -30,7 +30,7 @@ fn unzip(numbers) {
 }
 
 pub fn part1() {
-  let #(numbers, _) = extract_numbers("./data/d1p1.data")
+  let #(numbers, _) = extract_numbers("./data/d1.data")
   let #(left, right) = unzip(numbers)
 
   let left = left |> list.sort(int.compare)
