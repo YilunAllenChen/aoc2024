@@ -29,7 +29,7 @@ fn report_is_safe(report: Report) {
   })
 }
 
-fn report_is_safe_without_rec(left: List(Int), mid: Int, right: List(Int)) {
+fn report_is_safe_without_mid_rec(left: List(Int), mid: Int, right: List(Int)) {
   let this_case = list.append(left, right)
   case report_is_safe(Report(this_case)) {
     True -> True
@@ -37,7 +37,7 @@ fn report_is_safe_without_rec(left: List(Int), mid: Int, right: List(Int)) {
       case right {
         [] -> report_is_safe(Report(left))
         [hd, ..tl] -> {
-          report_is_safe_without_rec(list.append(left, [mid]), hd, tl)
+          report_is_safe_without_mid_rec(list.append(left, [mid]), hd, tl)
         }
       }
   }
@@ -49,7 +49,7 @@ fn report_is_safe_with_dampener(report: Report) {
     False -> {
       case report.levels {
         [] -> True
-        [hd, ..tl] -> report_is_safe_without_rec([], hd, tl)
+        [hd, ..tl] -> report_is_safe_without_mid_rec([], hd, tl)
       }
     }
   }
