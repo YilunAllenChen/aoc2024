@@ -29,26 +29,27 @@ fn report_is_safe(report: Report) {
   })
 }
 
+fn report_is_safe_without_rec(left: List(Int), mid: Int, right: List(Int)) {
+  let this_case = list.append(left, right)
+  case report_is_safe(Report(this_case)) {
+    True -> True
+    False ->
+      case right {
+        [] -> report_is_safe(Report(left))
+        [hd, ..tl] -> {
+          report_is_safe_without_rec(list.append(left, [mid]), hd, tl)
+        }
+      }
+  }
+}
+
 fn report_is_safe_with_dampener(report: Report) {
-  let diffs =
-    report.levels
-    |> list.window_by_2
-    |> list.map(fn(pair) { pair.1 - pair.0 })
-
-  let num_too_far = list.count(diffs, fn(diff) { int.absolute_value(diff) > 3 })
-
-  case num_too_far < 1 {
-    False -> False
-    True -> {
-      let #(gt, lez) = list.partition(diffs, fn(diff) { diff > 0 })
-      let #(lt, ez) = list.partition(lez, fn(diff) { diff < 0 })
-      let num_gt = list.length(gt)
-      let num_lt = list.length(lt)
-      let num_ez = list.length(ez)
-      case num_gt, num_lt, num_ez {
-        _, 1, 0 | _, 0, 1 | _, 0, 0 -> True
-        0, _, 1 | 1, _, 0 | 0, _, 0 -> True
-        _, _, _ -> False
+  case report_is_safe(report) {
+    True -> True
+    False -> {
+      case report.levels {
+        [] -> True
+        [hd, ..tl] -> report_is_safe_without_rec([], hd, tl)
       }
     }
   }
