@@ -192,4 +192,5 @@ pub fn part2() {
       }
     }
   })
+  |> io.debug
 }
