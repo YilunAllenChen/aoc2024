@@ -1,4 +1,5 @@
 import gleam/dict
+import gleam/function
 import gleam/io
 import gleam/list
 import gleam/option
@@ -140,7 +141,7 @@ fn xmas_form_around_loc(loc: Loc, all_loctoks: set.Set(LocToken)) {
   |> list.map(fn(placements) {
     list.all(placements, fn(loctok) { set.contains(all_loctoks, loctok) })
   })
-  |> list.any(fn(res) { res })
+  |> list.any(function.identity)
 }
 
 pub fn part1() {
@@ -171,6 +172,6 @@ pub fn part2() {
   useful_loctoks
   |> list.filter(fn(loktok) { loktok.token == A })
   |> list.map(fn(loktok) { xmas_form_around_loc(loktok.loc, loctok_set) })
-  |> list.count(fn(res) { res })
+  |> list.count(function.identity)
   |> io.debug
 }
