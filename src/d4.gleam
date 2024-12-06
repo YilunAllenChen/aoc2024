@@ -1,12 +1,9 @@
-import gleam/dict
 import gleam/function
 import gleam/io
 import gleam/list
 import gleam/option
-import gleam/result
 import gleam/set
 import gleam/string
-import glearray
 import simplifile
 
 pub type Token {
