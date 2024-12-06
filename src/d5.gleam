@@ -1,5 +1,4 @@
 import gleam/dict
-import gleam/erlang/process
 import gleam/int
 import gleam/io
 import gleam/list
@@ -155,11 +154,9 @@ pub fn part1() {
   reports
   |> list.map(report_str_to_report)
   |> list.filter(fn(rep) { report_is_valid(constraints, rep) })
-  // |> io.debug
   |> list.map(mid_page_in_report)
-  // |> io.debug
   |> list.fold(0, int.add)
-  // |> io.debug
+  |> io.debug
 }
 
 fn keep_ordering(
@@ -188,9 +185,6 @@ fn keep_ordering(
               )
             })
             |> dict.drop(dict.keys(ready_to_push))
-
-          new_dict |> dict.values |> list.map(debug_contraint)
-          process.sleep(10)
           keep_ordering(new_sorted, new_dict)
         }
       }
@@ -199,8 +193,24 @@ fn keep_ordering(
 }
 
 fn total_order(constraints: dict.Dict(String, Constraint)) {
-  constraints |> dict.values |> list.map(debug_contraint)
-  keep_ordering([], constraints)
+  let need_orderings = dict.keys(constraints) |> set.from_list
+  keep_ordering(
+    [],
+    constraints
+      |> dict.map_values(fn(_, con) {
+        Constraint(
+          ..con,
+          has_to_be_left_of: set.intersection(
+            con.has_to_be_left_of,
+            need_orderings,
+          ),
+          has_to_be_right_of: set.intersection(
+            con.has_to_be_right_of,
+            need_orderings,
+          ),
+        )
+      }),
+  )
 }
 
 fn debug_contraint(con: Constraint) {
@@ -224,19 +234,18 @@ pub fn part2() {
     |> list.map(rule_str_to_relation)
     |> relations_to_constraints
 
-  let all_sorted =
-    constraints
-    |> total_order
-    |> io.debug
-
   reports
   |> list.map(report_str_to_report)
   |> list.filter(fn(rep) { !report_is_valid(constraints, rep) })
   |> list.map(fn(bad_rep) {
-    let pages = set.from_list(bad_rep.pages)
-    list.filter(all_sorted, set.contains(pages, _))
+    let seen_pages = bad_rep.pages |> set.from_list
+    let partial_contraints =
+      dict.filter(constraints, fn(_, cons) {
+        set.contains(seen_pages, cons.key)
+      })
+    total_order(partial_contraints)
   })
-  |> list.map(fn(sorted) { Report(sorted) })
+  |> list.map(fn(sorted_pages) { Report(pages: sorted_pages) })
   |> list.map(mid_page_in_report)
   |> list.fold(0, int.add)
   |> io.debug
