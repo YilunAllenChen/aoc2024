@@ -1,4 +1,5 @@
 import gleam/dict
+import gleam/erlang/process
 import gleam/int
 import gleam/io
 import gleam/list
@@ -44,7 +45,7 @@ fn relations_to_constraints(
         dict.insert(
           acc,
           left,
-          Constraint(left, set.new(), set.insert(set.new(), right)),
+          Constraint(left, set.insert(set.new(), right), set.new()),
         )
     }
     case dict.get(temp, right) {
@@ -61,7 +62,7 @@ fn relations_to_constraints(
       Error(Nil) ->
         dict.insert(
           temp,
-          relation.right,
+          right,
           Constraint(right, set.new(), set.insert(set.new(), left)),
         )
     }
@@ -96,24 +97,6 @@ fn left_legal_placements(
       panic as "constraint not found"
     }
   }
-}
-
-fn fix_report(rep: Report, constraints: dict.Dict(String, Constraint)) -> Report {
-  let fixed_pages =
-    rep.pages
-    |> list.fold([], fn(acc, page) {
-      let has_to_be_right_of = case dict.get(constraints, page) {
-        Ok(con) -> con.has_to_be_right_of
-        Error(Nil) -> panic as "constraint not found"
-      }
-      let #(left, right) =
-        list.split_while(acc, satisfying: fn(lpage) {
-          set.contains(has_to_be_right_of, lpage)
-        })
-
-      list.flatten([left, [page], right])
-    })
-  Report(fixed_pages)
 }
 
 fn seq_satisfy_constraints(
@@ -179,6 +162,55 @@ pub fn part1() {
   // |> io.debug
 }
 
+fn keep_ordering(
+  sorted: List(String),
+  constraints: dict.Dict(String, Constraint),
+) {
+  case dict.size(constraints) {
+    0 -> sorted
+    _ -> {
+      let ready_to_push =
+        dict.filter(constraints, fn(_, cons) {
+          set.size(cons.has_to_be_right_of) == 0
+        })
+      case dict.size(ready_to_push) {
+        0 -> sorted
+        _ -> {
+          let new_sorted = list.append(sorted, dict.keys(ready_to_push))
+          let new_dict =
+            dict.map_values(constraints, fn(_, cons) {
+              Constraint(
+                ..cons,
+                has_to_be_right_of: set.drop(
+                  cons.has_to_be_right_of,
+                  dict.keys(ready_to_push),
+                ),
+              )
+            })
+            |> dict.drop(dict.keys(ready_to_push))
+
+          new_dict |> dict.values |> list.map(debug_contraint)
+          process.sleep(10)
+          keep_ordering(new_sorted, new_dict)
+        }
+      }
+    }
+  }
+}
+
+fn total_order(constraints: dict.Dict(String, Constraint)) {
+  constraints |> dict.values |> list.map(debug_contraint)
+  keep_ordering([], constraints)
+}
+
+fn debug_contraint(con: Constraint) {
+  io.println(
+    con.key
+    <> " has to be right of "
+    <> string.inspect(set.to_list(con.has_to_be_right_of)),
+  )
+}
+
 pub fn part2() {
   let #(rules, reports) =
     simplifile.read("./data/d5.data")
@@ -192,11 +224,19 @@ pub fn part2() {
     |> list.map(rule_str_to_relation)
     |> relations_to_constraints
 
+  let all_sorted =
+    constraints
+    |> total_order
+    |> io.debug
+
   reports
   |> list.map(report_str_to_report)
   |> list.filter(fn(rep) { !report_is_valid(constraints, rep) })
-  |> list.map(fn(rep) { fix_report(rep, constraints) })
-  |> list.map(io.debug)
+  |> list.map(fn(bad_rep) {
+    let pages = set.from_list(bad_rep.pages)
+    list.filter(all_sorted, set.contains(pages, _))
+  })
+  |> list.map(fn(sorted) { Report(sorted) })
   |> list.map(mid_page_in_report)
   |> list.fold(0, int.add)
   |> io.debug
