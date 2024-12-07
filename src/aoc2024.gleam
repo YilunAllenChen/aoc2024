@@ -1,4 +1,4 @@
-import d5 as wip
+import d6 as wip
 
 pub fn main() {
   wip.part1()
