@@ -2,6 +2,7 @@ import gleam/function
 import gleam/int
 import gleam/io
 import gleam/list
+import gleam/otp/task
 import gleam/result
 import gleam/set
 import gleam/string
@@ -207,7 +208,9 @@ pub fn part2() {
   |> list.map(fn(loc) {
     Map(..orig_map, walls: set.insert(orig_map.walls, loc))
   })
-  |> list.map(dispatch)
+  |> list.map(fn(map) { task.async(fn() { dispatch(map) }) })
+  |> task.try_await_all(10)
+  |> list.filter_map(function.identity)
   |> list.filter(fn(map) { map.contains_loop })
   |> list.length
   |> io.debug
