@@ -127,54 +127,36 @@ pub fn compact_disk_wholefile(disk: DiskWithRecords) -> DiskWithRecords {
     [], [] -> disk
     [], [_hd, ..] -> panic as "unreachable"
     [space_hd, ..space_tl], [data_hd, ..data_tl] -> {
-      case space_hd.start_pos > data_hd.start_pos {
-        True -> disk
-        False -> {
-          let can_match = fn(space: FreeSpace) { space.len >= data_hd.len }
-          let first_space_to_fit = list.find(disk.free_space, can_match)
-          case first_space_to_fit {
-            Ok(space) -> {
-              let match_size = data_hd.len
-              let moved_data =
-                DataChunk(
-                  id: data_hd.id,
-                  start_pos: space.start_pos,
-                  len: match_size,
-                )
-              let remaining_space =
-                FreeSpace(
-                  start_pos: space.start_pos + match_size,
-                  len: space.len - match_size,
-                )
-              let space_to_add =
-                [remaining_space] |> list.filter(space_not_empty)
-              let assert Ok(#(_, rest)) = list.pop(disk.free_space, can_match)
-              disk |> io.debug
-              moved_data |> io.debug
-              space |> io.debug
-              space_to_add |> io.debug
-              io.println("")
+      let can_match = fn(space: FreeSpace) { space.len >= data_hd.len }
+      let first_space_to_fit = list.find(disk.free_space, can_match)
+      case first_space_to_fit {
+        Ok(space) -> {
+          let match_size = data_hd.len
+          let moved_data = DataChunk(..data_hd, start_pos: space.start_pos)
+          let remaining_space =
+            FreeSpace(
+              start_pos: space.start_pos + match_size,
+              len: space.len - match_size,
+            )
+          let space_to_add = [remaining_space] |> list.filter(space_not_empty)
+          let assert Ok(#(_, rest)) = list.pop(disk.free_space, can_match)
 
-              DiskWithRecords(
-                ..disk,
-                free_space: list.append(space_to_add, rest)
-                  |> list.sort(fn(a, b) {
-                    int.compare(a.start_pos, b.start_pos)
-                  }),
-                data_chunks: data_tl,
-                moved_chunks: list.append(disk.moved_chunks, [moved_data]),
-              )
-              |> compact_disk_wholefile
-            }
-            Error(Nil) -> {
-              DiskWithRecords(
-                ..disk,
-                data_chunks: data_tl,
-                moved_chunks: list.append(disk.moved_chunks, [data_hd]),
-              )
-              |> compact_disk_wholefile
-            }
-          }
+          DiskWithRecords(
+            ..disk,
+            free_space: list.append(space_to_add, rest)
+              |> list.sort(fn(a, b) { int.compare(a.start_pos, b.start_pos) }),
+            data_chunks: data_tl,
+            moved_chunks: list.append(disk.moved_chunks, [moved_data]),
+          )
+          |> compact_disk_wholefile
+        }
+        Error(Nil) -> {
+          DiskWithRecords(
+            ..disk,
+            data_chunks: data_tl,
+            moved_chunks: list.append(disk.moved_chunks, [data_hd]),
+          )
+          |> compact_disk_wholefile
         }
       }
     }
@@ -210,7 +192,7 @@ pub fn part2() {
     |> disk_to_with_records
     |> compact_disk_wholefile
 
-  list.flatten([compacted_disk.moved_chunks, compacted_disk.data_chunks])
+  compacted_disk.moved_chunks
   |> list.sort(fn(a, b) { int.compare(a.start_pos, b.start_pos) })
   |> list.map(eval_chunk)
   |> list.fold(0, int.add)
